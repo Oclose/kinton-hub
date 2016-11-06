@@ -1,0 +1,23 @@
+[root]
+name = "kinton-yeelight"
+version = "0.1.0"
+dependencies = [
+ "mqtt3 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "byteorder"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "mqtt3"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[metadata]
+"checksum byteorder 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "96c8b41881888cc08af32d47ac4edd52bc7fa27fef774be47a92443756451304"
+"checksum mqtt3 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "628dfa5018191ef66edded34a203f9ca013424f2385e3580e8b8640b83730654"

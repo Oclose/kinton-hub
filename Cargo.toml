@@ -1,0 +1,7 @@
+[package]
+name = "kinton-yeelight"
+version = "0.1.0"
+authors = ["Diego Fernández Barrera <bigomby@gmail.com>"]
+
+[dependencies]
+mqtt3 = "0.1.4"
