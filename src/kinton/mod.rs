@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate hyper;
-
 const KINTON_API_URL: &'static str = "http://api.testing.kinton.io/api";
 
-use self::hyper::client::Client;
+use hyper;
 use std::io::Read;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -35,13 +33,23 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn new(device_uid: String, fleet_key: String) -> Result<Device, &'static str> {
+    pub fn new(client: Option<Box<hyper::Client>>,
+               device_uid: String,
+               fleet_key: String)
+               -> Result<Device, &'static str> {
         if DEVICES.lock().unwrap().contains_key(&device_uid) {
             return Err("Device already exists");
         }
 
+        let http_client: Box<hyper::Client>;
+
+        if let Some(c) = client {
+            http_client = c;
+        } else {
+            http_client = Box::new(hyper::Client::new());
+        }
+
         // Register device on Kinton
-        let http_client = Client::new();
         let register_url = format!("{}/fleets/{}/registerMote", KINTON_API_URL, fleet_key);
         let mut http_response = http_client.post(&register_url).body("").send().unwrap();
         let ref mut response = String::new();
@@ -49,6 +57,7 @@ impl Device {
         let parsed_response = json::parse(response).unwrap();
 
         if parsed_response["uuid"].is_null() || parsed_response["secret"].is_null() {
+            println!("{:?}", parsed_response.dump());
             return Err("Invalid response");
         }
 
@@ -78,16 +87,35 @@ impl Device {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    #[ignore]
-    fn test_already_exists_device() {
-        unimplemented!();
-    }
+    use super::Device;
+    use hyper;
+    use hyper::server::{Server, Request, Response};
+    use hyper::client::Client;
+    use std::sync::mpsc::channel;
+    use std::sync::Mutex;
+    use std::io::Read;
+    use std::thread;
 
     #[test]
-    #[ignore]
-    fn test_register_device() {
-        unimplemented!();
+    fn test_register_device_success() {
+        mock_connector!(MockRedirectPolicy {
+            "http://api.testing.kinton.io" =>
+                "HTTP/1.1 200 OK\r\n
+                \r\n
+                {\"uuid\": \"test_uuid\", \"secret\": \"test_secret\"}
+                "
+        });
+
+        let mut client = Client::with_connector(MockRedirectPolicy::default());
+        client.set_redirect_policy(hyper::client::RedirectPolicy::FollowAll);
+
+        let device = Device::new(Some(Box::new(client)),
+                                 String::from("uuid_1"),
+                                 String::from("fleet_1"))
+            .unwrap();
+
+        assert!(device.kinton_uuid == "test_uuid");
+        assert!(device.kinton_secret == "test_secret");
     }
 
     #[test]
