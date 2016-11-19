@@ -1,0 +1,31 @@
+sudo: false
+language: rust
+
+services:
+  - docker
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+
+rust:
+  - beta
+  - stable
+
+before_install:
+  - docker run -d -p 1883:1883 ansi/mosquitto
+
+before_script:
+  - pip install 'travis-cargo<0.2' --user
+  - export PATH=$HOME/.local/bin:$PATH
+
+script:
+  - travis-cargo build
+  - travis-cargo test
+
+after_success:
+  - travis-cargo coveralls --no-sudo --verify
