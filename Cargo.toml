@@ -5,8 +5,9 @@ authors = ["Diego Fernández Barrera <bigomby@gmail.com>"]
 
 [dependencies]
 json = "*"
-mqtt3 = "0.1.4"
+mqttc = "0.1.4"
 hyper = "0.9"
 lazy_static = "0.1.*"
 yup-hyper-mock = "*"
 log = "*"
+netopt = "0.1.3"
