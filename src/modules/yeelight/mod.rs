@@ -12,7 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod white_bulb;
+
+use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
+use std::time::Duration;
+use std::io::Error;
+use self::white_bulb::WhiteBulb;
+
+use super::Device;
+
 pub trait YeelightBulb {
+    // get_id is used to retrieve the ID of the smart LED.
+    fn get_id(&self) -> Result<String, &'static str>;
+
     // get_prop is used to retrieve current property of smart LED.
     fn get_prop(&self) -> Result<Vec<String>, &'static str>;
 
@@ -73,4 +85,54 @@ pub trait YeelightBulb {
     // SetName is used to name the device. The name will be stored on the device and reported in
     // discovering response. User can also read the name through "GetProp" method.
     fn set_name(&self, name: String) -> Option<&'static str>;
+}
+
+/**
+ * Sends a multicast SSDP M-SEARCH message and waits responses from Yeelight Bulbs. After a
+ * timeout returns a Vec with the found bulbs.
+ */
+fn find_devices(timeout: Option<Duration>) -> Result<Vec<Device>, Error> {
+    let mut devices = Vec::new();
+
+    let src = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
+    let dst = SocketAddrV4::new(Ipv4Addr::new(239, 255, 255, 250), 1982);
+    let socket = UdpSocket::bind(src).expect("Can't bind recv socket");
+    try!(socket.set_read_timeout(timeout));
+
+    let mut mx = 0;
+    if let Some(time) = timeout {
+        mx = time.as_secs();
+    }
+    let discover_message = format!("M-SEARCH * HTTP/1.1\r\nHOST: {host}\r\nST: wifi_bulb\r\nMAN: \
+                                    \"ssdp:discover\"\r\nMX: {mx}\r\n\n\n",
+                                   host = dst,
+                                   mx = mx);
+    try!(socket.send_to(&discover_message.into_bytes(), dst));
+
+    // TODO process more messages coming from more devices
+    let mut buf: [u8; 1024] = [0; 1024];
+    if let Ok(result) = socket.recv_from(&mut buf) {
+        devices.push(WhiteBulb::new(buf[0..result.0].to_vec()));
+    }
+
+    Ok(devices)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use modules::yeelight::find_devices;
+    use modules::Device;
+
+    #[test]
+    #[ignore]
+    fn test_find_bulbs() {
+        let devices = find_devices(Some(Duration::from_secs(3))).unwrap();
+        for device in devices {
+            if let Device::YeelightBulb(bulb) = device {
+                println!("Found bulb ID: {}", bulb.get_id().unwrap());
+            }
+        }
+    }
 }

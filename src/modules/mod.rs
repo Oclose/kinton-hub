@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate ssdp;
+pub mod yeelight;
 
-mod yeelight_bulb;
-mod white_bulb;
-
-pub fn find_bulbs() -> Result<Vec<YeelightBulb>, &'static str> {
-    // TODO
+pub enum Device {
+    YeelightBulb(Box<yeelight::YeelightBulb>),
+    None,
 }
