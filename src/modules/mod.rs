@@ -12,9 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod yeelight;
+mod yeelight;
+
+use std::thread;
+
+const UPDATE_INTERVAL_MS: u32 = 10 * 1000;
 
 pub enum Device {
     YeelightBulb(Box<yeelight::YeelightBulb>),
     None,
+}
+
+pub fn init() {
+    let devices_rx = yeelight::find_devices(UPDATE_INTERVAL_MS);
+    thread::spawn(move || {
+        loop {
+            let device = devices_rx.recv().unwrap();
+
+            match device {
+                Device::YeelightBulb(bulb) => {
+                    thread::spawn(move || {
+                        let id = bulb.get_id().unwrap();
+                        println!("{:?}", id);
+                    });
+                }
+                Device::None => {}
+            }
+        }
+    });
 }

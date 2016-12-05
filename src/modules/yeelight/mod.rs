@@ -16,12 +16,17 @@ mod white_bulb;
 
 use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use std::time::Duration;
-use std::io::Error;
-use self::white_bulb::WhiteBulb;
+use std::thread;
+use std::sync::mpsc::{channel, Receiver};
+
+use schedule_recv;
 
 use super::Device;
+use self::white_bulb::WhiteBulb;
 
-pub trait YeelightBulb {
+const DEFAULT_MX: u64 = 5;
+
+pub trait YeelightBulb: Send {
     // get_id is used to retrieve the ID of the smart LED.
     fn get_id(&self) -> Result<String, &'static str>;
 
@@ -88,34 +93,40 @@ pub trait YeelightBulb {
 }
 
 /**
- * Sends a multicast SSDP M-SEARCH message and waits responses from Yeelight Bulbs. After a
- * timeout returns a Vec with the found bulbs.
+ * Sends multicast SSDP M-SEARCH messages periodically to Yeelight Bulbs. When a bulb it's detected
+ * sends the info throuh a channel.
  */
-fn find_devices(timeout: Option<Duration>) -> Result<Vec<Device>, Error> {
-    let mut devices = Vec::new();
+pub fn find_devices(interval_ms: u32) -> Receiver<Device> {
+    let (tx, rx) = channel();
 
     let src = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
     let dst = SocketAddrV4::new(Ipv4Addr::new(239, 255, 255, 250), 1982);
     let socket = UdpSocket::bind(src).expect("Can't bind recv socket");
-    try!(socket.set_read_timeout(timeout));
 
-    let mut mx = 0;
-    if let Some(time) = timeout {
-        mx = time.as_secs();
-    }
-    let discover_message = format!("M-SEARCH * HTTP/1.1\r\nHOST: {host}\r\nST: wifi_bulb\r\nMAN: \
-                                    \"ssdp:discover\"\r\nMX: {mx}\r\n\n\n",
-                                   host = dst,
-                                   mx = mx);
-    try!(socket.send_to(&discover_message.into_bytes(), dst));
+    let timeout = Some(Duration::from_secs(DEFAULT_MX));
+    socket.set_read_timeout(timeout).unwrap();
 
-    // TODO process more messages coming from more devices
-    let mut buf: [u8; 1024] = [0; 1024];
-    if let Ok(result) = socket.recv_from(&mut buf) {
-        devices.push(WhiteBulb::new(buf[0..result.0].to_vec()));
-    }
+    thread::spawn(move || {
+        let tick = schedule_recv::periodic_ms(interval_ms);
+        loop {
+            let discover_message = format!("M-SEARCH * HTTP/1.1\r\nHOST: {host}\r\nST: \
+                                            wifi_bulb\r\nMAN: \"ssdp:discover\"\r\nMX: \
+                                            {mx}\r\n\n\n",
+                                           host = dst,
+                                           mx = DEFAULT_MX);
+            socket.send_to(&discover_message.into_bytes(), dst).unwrap();
 
-    Ok(devices)
+            let mut buf: [u8; 1024] = [0; 1024];
+            if let Ok(result) = socket.recv_from(&mut buf) {
+                tx.send(WhiteBulb::new(buf[0..result.0].to_vec())).unwrap();
+            }
+
+            // Don't flood the bulb
+            tick.recv().unwrap();
+        }
+    });
+
+    rx
 }
 
 #[cfg(test)]
@@ -128,11 +139,12 @@ mod tests {
     #[test]
     #[ignore]
     fn test_find_bulbs() {
-        let devices = find_devices(Some(Duration::from_secs(3))).unwrap();
-        for device in devices {
-            if let Device::YeelightBulb(bulb) = device {
-                println!("Found bulb ID: {}", bulb.get_id().unwrap());
-            }
+        let devices_rx = find_devices(5000);
+        let device = devices_rx.recv_timeout(Duration::from_millis(1000));
+
+        if let Device::YeelightBulb(bulb) = device.unwrap() {
+            let id = bulb.get_id().unwrap();
+            println!("{:?}", id);
         }
     }
 }

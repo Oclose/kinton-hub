@@ -18,14 +18,14 @@ use httparse::{EMPTY_HEADER, Response};
 
 const N_HEADERS: usize = 17;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Power {
     On,
     Off,
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ColorMode {
     Color,
     Temperature,
@@ -34,7 +34,7 @@ enum ColorMode {
 }
 
 // WhiteBulb is a Yeelight White device
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WhiteBulb {
     // ID is the ID of a Yeelight WiFi LED device, 3rd party device should use
     // this value to uniquely identified a Yeelight WiFi LED device.
