@@ -16,7 +16,6 @@ extern crate hyper;
 extern crate mqttc;
 extern crate netopt;
 extern crate httparse;
-extern crate schedule_recv;
 
 #[macro_use]
 extern crate yup_hyper_mock as hyper_mock;

@@ -16,10 +16,10 @@ mod yeelight;
 
 use std::thread;
 
-const UPDATE_INTERVAL_MS: u32 = 10 * 1000;
+const UPDATE_INTERVAL_MS: u64 = 10 * 1000;
 
 pub enum Device {
-    YeelightBulb(Box<yeelight::YeelightBulb>),
+    YeelightBulb(yeelight::YeelightBulb),
     None,
 }
 
@@ -31,10 +31,7 @@ pub fn init() {
 
             match device {
                 Device::YeelightBulb(bulb) => {
-                    thread::spawn(move || {
-                        let id = bulb.get_id().unwrap();
-                        println!("{:?}", id);
-                    });
+                    println!("{:?}", bulb);
                 }
                 Device::None => {}
             }
