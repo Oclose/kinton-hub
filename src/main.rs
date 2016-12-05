@@ -12,11 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate ssdp;
+extern crate hyper;
+extern crate mqttc;
+extern crate netopt;
+extern crate httparse;
 
-mod yeelight_bulb;
-mod white_bulb;
+#[macro_use]
+extern crate yup_hyper_mock as hyper_mock;
 
-pub fn find_bulbs() -> Result<Vec<YeelightBulb>, &'static str> {
-    // TODO
+#[macro_use]
+extern crate lazy_static;
+
+#[macro_use]
+extern crate json;
+
+pub mod kinton;
+pub mod modules;
+
+fn main() {
+    modules::init();
+    loop {}
 }

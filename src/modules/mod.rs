@@ -11,3 +11,30 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+mod yeelight;
+
+use std::thread;
+
+const UPDATE_INTERVAL_MS: u64 = 10 * 1000;
+
+pub enum Device {
+    YeelightBulb(yeelight::YeelightBulb),
+    None,
+}
+
+pub fn init() {
+    let devices_rx = yeelight::find_devices(UPDATE_INTERVAL_MS);
+    thread::spawn(move || {
+        loop {
+            let device = devices_rx.recv().unwrap();
+
+            match device {
+                Device::YeelightBulb(bulb) => {
+                    println!("{:?}", bulb);
+                }
+                Device::None => {}
+            }
+        }
+    });
+}

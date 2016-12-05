@@ -1,13 +1,13 @@
 [package]
-name = "kinton-yeelight"
+name = "kinton-hub"
 version = "0.1.0"
 authors = ["Diego Fernández Barrera <bigomby@gmail.com>"]
 
 [dependencies]
-json = "*"
-mqttc = "0.1.4"
 hyper = "0.9"
-lazy_static = "0.1.*"
 yup-hyper-mock = "*"
-log = "*"
+mqttc = "0.1.4"
 netopt = "0.1.3"
+httparse = "1.2.0"
+json = "*"
+lazy_static = "0.1.*"
